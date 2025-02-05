@@ -1,25 +1,84 @@
-import React, { useRef } from 'react';
+import React, { useRef, useState } from 'react';
 import * as THREE from 'three';
 import { Text, Center } from '@react-three/drei';
+import { ThreeEvent, useThree } from '@react-three/fiber';
 
 interface RobotArmSceneProps {
     jointAngles: number[];
+    onDropCube: (fn: () => void) => void;
+    onPickUpCube: (picked: boolean) => void;
 }
 
-export const RobotArmScene: React.FC<RobotArmSceneProps> = ({ jointAngles }) => {
+export const RobotArmScene: React.FC<RobotArmSceneProps> = ({ jointAngles, onDropCube, onPickUpCube }) => {
+    const { scene } = useThree();
     const baseRef = useRef<THREE.Group>(null);
     const shoulderRef = useRef<THREE.Group>(null);
     const elbowRef = useRef<THREE.Group>(null);
+    const [selectedCube, setSelectedCube] = useState<THREE.Mesh | null>(null);
+    const [isGrasping, setIsGrasping] = useState(false);
+    const [selectedCubeIndex, setSelectedCubeIndex] = useState<number | null>(null);
 
+    // Create some target cubes
+    const cubes = [
+        { position: [-1, 0.25, -1] as [number, number, number], color: 'orange' },
+        { position: [1, 0.25, 1] as [number, number, number], color: 'purple' },
+        { position: [-1, 0.25, 1] as [number, number, number], color: 'cyan' },
+    ];
 
+    const handleCubeClick = (event: ThreeEvent<MouseEvent>, index: number) => {
+        event.stopPropagation();
+        if (!isGrasping) {
+            setSelectedCubeIndex(index);
+            setSelectedCube(event.object as THREE.Mesh);
+        }
+    };
 
     React.useEffect(() => {
         if (baseRef.current && shoulderRef.current && elbowRef.current) {
             baseRef.current.rotation.y = jointAngles[0];
             shoulderRef.current.rotation.z = jointAngles[1];
             elbowRef.current.rotation.z = jointAngles[2];
+
+            // If we have a selected cube and the arm is in position, grasp it
+            if (selectedCube && !isGrasping) {
+                const endEffectorPosition = new THREE.Vector3();
+                const endEffector = elbowRef.current.children[1]; // The green sphere
+                endEffector.getWorldPosition(endEffectorPosition);
+                
+                const cubePosition = selectedCube.position;
+                if (endEffectorPosition.distanceTo(cubePosition) < 0.5) {
+                    setIsGrasping(true);
+                    // Attach to the end effector (green sphere)
+                    selectedCube.position.set(0, 0, 0); // Reset local position
+                    endEffector.add(selectedCube); // Add the cube to the end effector
+                    onPickUpCube(true);
+                }
+            }
         }
-    }, [jointAngles]);
+    }, [jointAngles, selectedCube, isGrasping]);
+
+    React.useEffect(() => {
+        onDropCube(() => {
+            if (selectedCube && isGrasping && elbowRef.current) {
+                // Store the cube's current world position
+                const worldPosition = new THREE.Vector3();
+                selectedCube.getWorldPosition(worldPosition);
+                
+                // Remove from end effector
+                const endEffector = elbowRef.current.children[1];
+                endEffector.remove(selectedCube);
+                
+                // Add back to scene at the stored world position
+                scene.add(selectedCube);
+                selectedCube.position.copy(worldPosition);
+                
+                // Reset states
+                setIsGrasping(false);
+                setSelectedCube(null);
+                setSelectedCubeIndex(null);
+            }
+        });
+    }, [selectedCube, isGrasping]);
 
     return (
         <group>
@@ -34,12 +93,30 @@ export const RobotArmScene: React.FC<RobotArmSceneProps> = ({ jointAngles }) => 
                 </Text>
             </Center>
 
+            {/* Target Cubes */}
+            {cubes.map((cube, index) => (
+                <mesh
+                    key={index}
+                    position={cube.position}
+                    onClick={(e) => handleCubeClick(e, index)}
+                >
+                    <boxGeometry args={[0.3, 0.3, 0.3]} />
+                    <meshStandardMaterial 
+                        color={cube.color}
+                        emissive={selectedCubeIndex === index ? 0x444444 : 0x000000}
+                    />
+                </mesh>
+            ))}
+
+            {/* Robot Arm */}
             <group ref={baseRef}>
                 <mesh position={[0, 0.25, 0]}>
                     <boxGeometry args={[0.5, 0.5, 0.5]} />
                     <meshStandardMaterial color="black" />
                 </mesh>
                 
+                {/* The groupped elements are the parts of the arm */}
+                {/* Like shoulder, elbow and end effector */}
                 <group ref={shoulderRef} position={[0, 0.5, 0]}>
                     <mesh position={[0, 0.5, 0]}>
                         <boxGeometry args={[0.3, 1, 0.3]} />
