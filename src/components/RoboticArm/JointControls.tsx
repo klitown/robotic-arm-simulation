@@ -15,6 +15,21 @@ export const JointControls: React.FC<JointControlsProps> = ({
     onSpawnCube,
     isGrasping,
 }) => {
+    const handleJointChange = (index: number, value: number) => {
+        const newAngles = [...jointAngles];
+        newAngles[index] = value;
+
+        // If elbow (index 2) is being changed, adjust shoulder (index 1)
+        if (index === 2) {
+            // As elbow extends (approaches PI), shoulder also extends forward
+            // As elbow bends (approaches 0), shoulder also bends back
+            const shoulderOffset = value / 3;
+            newAngles[1] = shoulderOffset;
+        }
+
+        setJointAngles(newAngles);
+    };
+
     return (
         <div
             style={{
@@ -56,12 +71,11 @@ export const JointControls: React.FC<JointControlsProps> = ({
                                         ).toFixed(1)
                                     )}
                                     onChange={(e) => {
-                                        const newAngles = [...jointAngles];
                                         // Convert degrees to radians
-                                        newAngles[index] =
+                                        const radians =
                                             Number(e.target.value) *
                                             (Math.PI / 180);
-                                        setJointAngles(newAngles);
+                                        handleJointChange(index, radians);
                                     }}
                                     style={{
                                         width: "70px",
@@ -82,9 +96,10 @@ export const JointControls: React.FC<JointControlsProps> = ({
                             step={0.01}
                             value={jointAngles[index]}
                             onChange={(e) => {
-                                const newAngles = [...jointAngles];
-                                newAngles[index] = parseFloat(e.target.value);
-                                setJointAngles(newAngles);
+                                handleJointChange(
+                                    index,
+                                    parseFloat(e.target.value)
+                                );
                             }}
                             style={{ width: "200px" }}
                         />
