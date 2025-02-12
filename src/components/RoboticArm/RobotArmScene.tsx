@@ -88,7 +88,7 @@ export const RobotArmScene: React.FC<RobotArmSceneProps> = ({
 
     return (
         <group>
-            <Center position={[0, 0.1, -2]}>
+            <Center position={[0, 3, -5]}>
                 <Text
                     fontSize={0.5}
                     color="#4a4a4a"
@@ -137,7 +137,7 @@ export const RobotArmScene: React.FC<RobotArmSceneProps> = ({
                         </mesh>
 
                         <mesh position={[0, 1, 0]}>
-                            <sphereGeometry args={[0.1]} />
+                            <sphereGeometry args={[0.2]} />
                             <meshStandardMaterial color="green" />
                         </mesh>
                     </group>
