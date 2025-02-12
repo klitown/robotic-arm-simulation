@@ -60,7 +60,7 @@ const RoboticArm: React.FC = () => {
                 />
                 <OrbitControls makeDefault />
                 <gridHelper args={[10, 10]} />
-                <ambientLight intensity={0.1} />
+                <ambientLight intensity={0.7} />
                 <directionalLight position={[5, 5, 5]} intensity={0.8} />
             </Canvas>
             <JointControls
