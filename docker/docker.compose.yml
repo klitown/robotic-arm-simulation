@@ -1,0 +1,13 @@
+---
+services:
+  robotic_arm_viz:
+    build:
+      context: ../
+      dockerfile: Dockerfile
+    container_name: robotic_arm_viz
+    ports:
+      - "5173:5173"
+    volumes:
+      - ../:/ws:rw
+    environment:
+      - NODE_ENV=development 
